@@ -1,12 +1,10 @@
 #!/bin/bash
 
-FILES="./mirrors"
 LIBFILES=""
-LIBFILES="${LIBFILES} $(find ./lib -name '*.py' | tr '\n' ' ')"
-LIBFILES="${LIBFILES} $(find ./libexec -name '*.py' | tr '\n' ' ')"
+LIBFILES="${LIBFILES} $(find ./aosp -name '*.py' | tr '\n' ' ')"
 ERRFLAG=0
 
-OUTPUT=`pyflakes ${FILES} ${LIBFILES} 2>&1`
+OUTPUT=`pyflakes ${LIBFILES} 2>&1`
 if [ -n "$OUTPUT" ] ; then
     echo "pyflake errors:"
     echo "$OUTPUT"
@@ -14,7 +12,7 @@ if [ -n "$OUTPUT" ] ; then
     ERRFLAG=1
 fi
 
-OUTPUT=`pycodestyle ${FILES} ${LIBFILES} | grep -Ev "E501|E402"`
+OUTPUT=`pycodestyle ${LIBFILES} | grep -Ev "E501|E402"`
 if [ -n "$OUTPUT" ] ; then
     echo "pycodestyle errors:"
     echo "$OUTPUT"
