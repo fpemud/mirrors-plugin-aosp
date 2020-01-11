@@ -78,6 +78,7 @@ class _Util:
                 "progress": progress,
             },
         }).encode("utf-8"))
+        sock.send(b'\n')
 
     @staticmethod
     def error_occured(sock, exc_info):
@@ -87,6 +88,7 @@ class _Util:
                 "exc_info": "abc",
             },
         }).encode("utf-8"))
+        sock.send(b'\n')
 
     @staticmethod
     def forceDelete(filename):

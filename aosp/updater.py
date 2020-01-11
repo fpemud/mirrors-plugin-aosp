@@ -40,6 +40,7 @@ class _Util:
                 "exc_info": "abc",
             },
         }).encode("utf-8"))
+        sock.send(b'\n')
 
     @staticmethod
     def shellCall(cmd):
