@@ -35,7 +35,7 @@ class _Util:
     @staticmethod
     def error_occured(sock, exc_info):
         sock.send(json.dumps({
-            "message": "error_occured",
+            "message": "error",
             "data": {
                 "exc_info": "abc",
             },
