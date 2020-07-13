@@ -14,7 +14,7 @@ def do_update():
     sock = _Util.connect()
     try:
         dataDir = sys.argv[1]
-        logDir = sys.argv[3]
+        logDir = sys.argv[2]
         with _TempChdir(dataDir):
             _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (os.path.join(logDir, "repo.log")))
     except:
@@ -39,7 +39,8 @@ class _Util:
             "data": {
                 "exc_info": "abc",
             },
-        }).encoding("utf-8"))
+        }).encode("utf-8"))
+        sock.send(b'\n')
 
     @staticmethod
     def shellCall(cmd):
