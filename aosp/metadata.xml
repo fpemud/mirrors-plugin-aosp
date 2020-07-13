@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="aosp">
-  <git-mirror id="aosp">
+  <mirror-site id="aosp">
     <name>AOSP</name>
     <data-directory>aosp</data-directory>
     <initializer>
@@ -13,5 +13,5 @@
     <advertiser>
       <protocol>git-http</protocol>
     </advertiser>
-  </git-mirror>
+  </mirror-site>
 </plugin>
