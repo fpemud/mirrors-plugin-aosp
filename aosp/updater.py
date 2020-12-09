@@ -5,42 +5,19 @@ import os
 import sys
 import json
 import time
-import shutil
-import socket
 import subprocess
+import mirrors.plugin
 
 
-def do_update():
-    sock = _Util.connect()
-    try:
-        dataDir = sys.argv[1]
-        logDir = sys.argv[2]
+def main():
+    with mirrors.plugin.ApiClient():
+        logDir = json.loads(sys.argv[1])["log-directory"]
+        dataDir = json.loads(sys.argv[1])["storage-file"]["data-directory"]
         with _TempChdir(dataDir):
             _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (os.path.join(logDir, "repo.log")))
-    except:
-        _Util.error_occured(sock, sys.exc_info())
-        raise
-    finally:
-        sock.close()
 
 
 class _Util:
-
-    @staticmethod
-    def connect():
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect("/run/mirrors/api.socket")
-        return sock
-
-    @staticmethod
-    def error_occured(sock, exc_info):
-        sock.send(json.dumps({
-            "message": "error",
-            "data": {
-                "exc_info": "abc",
-            },
-        }).encode("utf-8"))
-        sock.send(b'\n')
 
     @staticmethod
     def shellCall(cmd):
@@ -73,4 +50,4 @@ class _TempChdir:
 ###############################################################################
 
 if __name__ == "__main__":
-    do_update()
+    main()

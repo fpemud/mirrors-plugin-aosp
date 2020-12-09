@@ -6,14 +6,13 @@ import sys
 import json
 import time
 import shutil
-import socket
 import subprocess
+import mirrors.plugin
 
 
-def do_init():
-    sock = _Util.connect()
-    try:
-        dataDir = sys.argv[1]
+def main():
+    with mirrors.plugin.ApiClient() as sock:
+        dataDir = json.loads(sys.argv[1])["storage-file"]["data-directory"]
         dstFile = os.path.join(dataDir, "aosp-latest.tar")
         usedFile = dstFile + ".used"
 
@@ -24,7 +23,7 @@ def do_init():
                 url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
                 logFile = os.path.join(dataDir, "wget.log")
                 _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
-            _Util.progress_changed(sock, 50)
+            sock.progress_changed(50)
 
             # clear directory
             print("Clear cache directory.")
@@ -32,17 +31,17 @@ def do_init():
                 fullfn = os.path.join(dataDir, fn)
                 if fullfn != dstFile:
                     _Util.forceDelete(fullfn)
-            _Util.progress_changed(sock, 55)
+            sock.progress_changed(55)
 
             # extract
             # sometimes tar file contains minor errors
             print("Extract aosp-latest.tar.")
             _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
             os.rename(dstFile, usedFile)
-            _Util.progress_changed(sock, 60)
+            sock.progress_changed(60)
         else:
             print("Found \"aosp-latest.tar.used\".")
-            _Util.progress_changed(sock, 60)
+            sock.progress_changed(60)
 
         # sync
         print("Synchonization starts.")
@@ -50,45 +49,14 @@ def do_init():
             logFile = os.path.join(dataDir, "repo.log")
             _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
         print("Synchonization over.")
-        _Util.progress_changed(sock, 99)
+        sock.progress_changed(99)
 
         # all done, delete the tar file
         _Util.forceDelete(usedFile)
-        _Util.progress_changed(sock, 100)
-    except:
-        _Util.error_occured(sock, sys.exc_info())
-        raise
-    finally:
-        sock.close()
+        sock.progress_changed(100)
 
 
 class _Util:
-
-    @staticmethod
-    def connect():
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect("/run/mirrors/api.socket")
-        return sock
-
-    @staticmethod
-    def progress_changed(sock, progress):
-        sock.send(json.dumps({
-            "message": "progress",
-            "data": {
-                "progress": progress,
-            },
-        }).encode("utf-8"))
-        sock.send(b'\n')
-
-    @staticmethod
-    def error_occured(sock, exc_info):
-        sock.send(json.dumps({
-            "message": "error",
-            "data": {
-                "exc_info": "abc",
-            },
-        }).encode("utf-8"))
-        sock.send(b'\n')
 
     @staticmethod
     def forceDelete(filename):
@@ -137,4 +105,4 @@ class _TempChdir:
 ###############################################################################
 
 if __name__ == "__main__":
-    do_init()
+    main()
