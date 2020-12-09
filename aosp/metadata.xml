@@ -5,7 +5,7 @@
     <storage type="file"/>
     <advertiser type="git"/>
     <initializer>
-      <executable>initializer.py</executable>
+      <executable>updater.py</executable>
     </initializer>
     <updater>
       <executable>updater.py</executable>
