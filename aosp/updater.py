@@ -17,55 +17,62 @@ def main():
         dataDir = json.loads(sys.argv[1])["storage-file"]["data-directory"]
 
         if runMode == "init":
-            dstFileUrl = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
-            dstFile = os.path.join(dataDir, "aosp-latest.tar")
-            dstMd5FileUrl = dstFileUrl + ".md5"
-            dstMd5File = dstFile + ".md5"
-
-            # download md5 file
-            print("Download \"aosp-latest.tar.md5\".")
-            _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
-            sock.progress_changed(5)
-
-            # download data file
-            print("Download \"aosp-latest.tar\".")
-            if not os.path.exists(dstFile) or not _Util.verifyFileMd5(dstFile, dstMd5File):
-                _Util.wgetDownload(dstFileUrl, dstFile)
-                if not _Util.verifyFileMd5(dstFile, dstMd5File):
-                    raise Exception("the just downloaded file is corrupt")
-            sock.progress_changed(50)
-
-            # clear directory
-            print("Clear cache directory.")
-            for fn in os.listdir(dataDir):
-                fullfn = os.path.join(dataDir, fn)
-                if fullfn in [dstFile, dstMd5File]:
-                    continue
-                _Util.forceDelete(fullfn)
-            sock.progress_changed(55)
-
-            # extract
-            # sometimes tar file contains minor errors
-            print("Extract aosp-latest.tar.")
-            _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
-            sock.progress_changed(60)
-
-            # sync
-            print("Synchonize.")
-            with _TempChdir(dataDir):
-                _Util.cmdExec("/usr/bin/repo", "sync")
-            sock.progress_changed(99)
-
-            # all done, delete the tar data file and md5 file
-            _Util.forceDelete(dstFile)
-            _Util.forceDelete(dstMd5File)
-            sock.progress_changed(100)
+            _init(dataDir, sock)
         elif runMode == "update":
-            # sync
-            with _TempChdir(dataDir):
-                _Util.cmdExec("/usr/bin/repo", "sync")
+            _update(dataDir, sock)
         else:
             assert False
+
+
+def _init(dataDir, sock):
+    dstFileUrl = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
+    dstFile = os.path.join(dataDir, "aosp-latest.tar")
+    dstMd5FileUrl = dstFileUrl + ".md5"
+    dstMd5File = dstFile + ".md5"
+
+    # download md5 file
+    print("Download \"aosp-latest.tar.md5\".")
+    _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
+    sock.progress_changed(5)
+
+    # download data file
+    print("Download \"aosp-latest.tar\".")
+    if not os.path.exists(dstFile) or not _Util.verifyFileMd5(dstFile, dstMd5File):
+        _Util.wgetDownload(dstFileUrl, dstFile)
+        if not _Util.verifyFileMd5(dstFile, dstMd5File):
+            raise Exception("the just downloaded file is corrupt")
+    sock.progress_changed(50)
+
+    # clear directory
+    print("Clear cache directory.")
+    for fn in os.listdir(dataDir):
+        fullfn = os.path.join(dataDir, fn)
+        if fullfn in [dstFile, dstMd5File]:
+            continue
+        _Util.forceDelete(fullfn)
+    sock.progress_changed(55)
+
+    # extract
+    # sometimes tar file contains minor errors
+    print("Extract aosp-latest.tar.")
+    _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
+    sock.progress_changed(60)
+
+    # sync
+    print("Synchonize.")
+    with _TempChdir(dataDir):
+        _Util.cmdExec("/usr/bin/repo", "sync")
+    sock.progress_changed(99)
+
+    # all done, delete the tar data file and md5 file
+    _Util.forceDelete(dstFile)
+    _Util.forceDelete(dstMd5File)
+    sock.progress_changed(100)
+
+
+def _update(dataDir, sock):
+    with _TempChdir(dataDir):
+        _Util.cmdExec("/usr/bin/repo", "sync")
 
 
 class _Util:
