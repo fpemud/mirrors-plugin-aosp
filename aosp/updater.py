@@ -2,12 +2,17 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import re
 import sys
 import json
 import time
+import glob
 import shutil
 import hashlib
+import certifi
 import subprocess
+import lxml.html
+import urllib.request
 import mirrors.plugin
 
 
@@ -25,36 +30,55 @@ def main():
 
 
 def _init(dataDir, sock):
-    dstFileUrl = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
-    dstFile = os.path.join(dataDir, "aosp-latest.tar")
-    dstMd5FileUrl = dstFileUrl + ".md5"
-    dstMd5File = dstFile + ".md5"
+    # find downloaded tar data file
+    dstFile = None
+    dstMd5File = None
+    if True:
+        tlist = glob.glob(os.path.join(dataDir, "*.tar"))
+        tlist = [x for x in tlist if os.path.exists(x + ".md5")]
+        if len(tlist) > 0:
+            dstFile = tlist[-1]
+            dstMd5File = dstFile + ".md5"
+            _Util.deleteDirContent(dataDir, [dstFile, dstMd5File])
+        else:
+            _Util.deleteDirContent(dataDir)
 
-    # download md5 file
-    print("Download \"aosp-latest.tar.md5\".")
-    _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
-    sock.progress_changed(5)
+    # check tar data file, download if needed
+    if dstFile is None or not _Util.verifyFile(dstFile, dstMd5File):
+        # clear history
+        dstFile = None
+        dstFileUrl = None
+        _Util.deleteDirContent(dataDir)
 
-    # download data file
-    print("Download \"aosp-latest.tar\".")
-    if not os.path.exists(dstFile) or not _Util.verifyFileMd5(dstFile, dstMd5File):
+        # get tar data file url
+        url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly"
+        resp = urllib.request.urlopen(url, timeout=60, cafile=certifi.where())
+        root = lxml.html.parse(resp)
+        for aTag in root.xpath(".//table[@id='list']/tbody/tr/td[0]/a[0]"):
+            m = re.fullmatch("aosp-[0-9]+\\.tar", aTag.text)
+            if dstFile is None or dstFile < m.group(0):
+                dstFile = m.group(0)
+                dstFileUrl = aTag.get("href")
+                dstMd5File = dstFile + ".md5"
+                dstMd5FileUrl = dstFileUrl + ".md5"
+        if dstFile is None:
+            raise Exception("no tar data file found")
+
+        # download md5 file
+        print("Download \"%s\"." % (dstMd5File))
+        _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
+        sock.progress_changed(5)
+
+        # download data file
+        print("Download \"%s\"." % (dstFile))
         _Util.wgetDownload(dstFileUrl, dstFile)
-        if not _Util.verifyFileMd5(dstFile, dstMd5File):
-            raise Exception("the just downloaded file is corrupt")
+        if not _Util.verifyFile(dstFile, dstMd5File):
+            raise Exception("the downloaded file is corrupt")
     sock.progress_changed(50)
-
-    # clear directory
-    print("Clear cache directory.")
-    for fn in os.listdir(dataDir):
-        fullfn = os.path.join(dataDir, fn)
-        if fullfn in [dstFile, dstMd5File]:
-            continue
-        _Util.forceDelete(fullfn)
-    sock.progress_changed(55)
 
     # extract
     # sometimes tar file contains minor errors
-    print("Extract aosp-latest.tar.")
+    print("Extract \"%s\"." % (dstFile))
     _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
     sock.progress_changed(60)
 
@@ -78,7 +102,20 @@ def _update(dataDir, sock):
 class _Util:
 
     @staticmethod
-    def verifyFileMd5(filename, md5sum):
+    def deleteDirContent(path, ignoreList=[]):
+        for fn in os.listdir(path):
+            if fn in ignoreList:
+                continue
+            fullfn = os.path.join(path, fn)
+            _Util.forceDelete(fullfn)
+
+    @staticmethod
+    def readFile(filename):
+        with open(filename) as f:
+            return f.read()
+
+    @staticmethod
+    def verifyFile(filename, md5Filename):
         with open(filename, "rb") as f:
             thash = hashlib.md5()
             while True:
@@ -86,7 +123,7 @@ class _Util:
                 if len(block) == 0:
                     break
                 thash.update(block)
-            return thash.hexdigest() == md5sum
+            return thash.hexdigest() == _Util.readFile(md5Filename)
 
     @staticmethod
     def wgetDownload(url, localFile=None):
