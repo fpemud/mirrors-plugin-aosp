@@ -54,23 +54,24 @@ def _init(dataDir, sock):
         url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly"
         resp = urllib.request.urlopen(url, timeout=60, cafile=certifi.where())
         root = lxml.html.parse(resp)
-        for aTag in root.xpath(".//table[@id='list']/tbody/tr/td[0]/a[0]"):
+        for trElem in root.xpath(".//table[@id='list']/tbody/tr"):
+            aTag = trElem.xpath("./td")[0].xpath("./a")[0]
             m = re.fullmatch("aosp-[0-9]+\\.tar", aTag.text)
-            if dstFile is None or dstFile < m.group(0):
+            if m is not None and (dstFile is None or dstFile < m.group(0)):
                 dstFile = m.group(0)
-                dstFileUrl = aTag.get("href")
+                dstFileUrl = os.path.join(url, aTag.get("href"))
                 dstMd5File = dstFile + ".md5"
                 dstMd5FileUrl = dstFileUrl + ".md5"
         if dstFile is None:
             raise Exception("no tar data file found")
 
         # download md5 file
-        print("Download \"%s\"." % (dstMd5File))
+        print("Download \"%s\"." % (dstMd5FileUrl))
         _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
         sock.progress_changed(5)
 
         # download data file
-        print("Download \"%s\"." % (dstFile))
+        print("Download \"%s\"." % (dstFileUrl))
         _Util.wgetDownload(dstFileUrl, dstFile)
         if not _Util.verifyFile(dstFile, dstMd5File):
             raise Exception("the downloaded file is corrupt")
