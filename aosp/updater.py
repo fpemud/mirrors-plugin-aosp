@@ -58,7 +58,7 @@ def _init(dataDir, sock):
             aTag = trElem.xpath("./td")[0].xpath("./a")[0]
             m = re.fullmatch("aosp-[0-9]+\\.tar", aTag.text)
             if m is not None and (dstFile is None or dstFile < m.group(0)):
-                dstFile = m.group(0)
+                dstFile = os.path.join(dataDir, m.group(0))
                 dstFileUrl = os.path.join(url, aTag.get("href"))
                 dstMd5File = dstFile + ".md5"
                 dstMd5FileUrl = dstFileUrl + ".md5"
@@ -103,11 +103,11 @@ def _update(dataDir, sock):
 class _Util:
 
     @staticmethod
-    def deleteDirContent(path, ignoreList=[]):
+    def deleteDirContent(path, fullfnIgnoreList=[]):
         for fn in os.listdir(path):
-            if fn in ignoreList:
-                continue
             fullfn = os.path.join(path, fn)
+            if fullfn in fullfnIgnoreList:
+                continue
             _Util.forceDelete(fullfn)
 
     @staticmethod
