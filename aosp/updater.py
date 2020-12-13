@@ -8,7 +8,6 @@ import json
 import time
 import glob
 import shutil
-import hashlib
 import certifi
 import subprocess
 import lxml.html
@@ -46,7 +45,7 @@ def _init(dataDir, sock):
             _Util.deleteDirContent(dataDir)
 
     # check tar data file, continue download if needed
-    if dstFile is not None and not _Util.verifyFile(dstFile, dstMd5File):
+    if dstFile is not None and not __verifyFile(dataDir, dstMd5File):
         fnList = __getFileList()
         dstFileUrl = None
         for fn, url in fnList:
@@ -56,7 +55,7 @@ def _init(dataDir, sock):
         if dstFileUrl is not None:
             print("Continue download \"%s\"." % (dstFileUrl))
             _Util.wgetContinueDownload(dstFileUrl, dstFile)
-            if not _Util.verifyFile(dstFile, dstMd5File):
+            if not __verifyFile(dataDir, dstMd5File):
                 raise Exception("the downloaded file is corrupt")
         else:
             dstFile = None
@@ -81,7 +80,7 @@ def _init(dataDir, sock):
         _Util.wgetDownload(dstFileUrl, dstFile)
 
         # check
-        if not _Util.verifyFile(dstFile, dstMd5File):
+        if not __verifyFile(dataDir, dstMd5File):
             raise Exception("the downloaded file is corrupt")
 
     sock.progress_changed(50)
@@ -127,6 +126,11 @@ def __getFileList():
     return ret
 
 
+def __verifyFile(dataDir, md5Filename):
+    with _TempChdir(dataDir):
+        return _Util.cmdCallTestSuccess("/usr/bin/md5sum", "-c", md5Filename)
+
+
 class _Util:
 
     @staticmethod
@@ -136,22 +140,6 @@ class _Util:
             if fullfn in fullfnIgnoreList:
                 continue
             _Util.forceDelete(fullfn)
-
-    @staticmethod
-    def readFile(filename):
-        with open(filename) as f:
-            return f.read()
-
-    @staticmethod
-    def verifyFile(filename, md5Filename):
-        with open(filename, "rb") as f:
-            thash = hashlib.md5()
-            while True:
-                block = f.read(65536)
-                if len(block) == 0:
-                    break
-                thash.update(block)
-            return thash.hexdigest() == _Util.readFile(md5Filename)
 
     @staticmethod
     def wgetDownload(url, localFile=None):
@@ -181,6 +169,15 @@ class _Util:
             os.remove(filename)
         elif os.path.isdir(filename):
             shutil.rmtree(filename)
+
+    @staticmethod
+    def cmdCallTestSuccess(cmd, *kargs):
+        ret = subprocess.run([cmd] + list(kargs),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)
+        return (ret.returncode == 0)
 
     @staticmethod
     def cmdExec(cmd, *kargs):
