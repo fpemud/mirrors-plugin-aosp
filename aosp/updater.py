@@ -46,12 +46,15 @@ def _init(dataDir, sock):
 
     # check tar data file, continue download if needed
     if dstFile is not None and not __verifyFile(dataDir, dstMd5File):
-        fnList = __getFileList()
+        if fnList is None:
+            fnList = __getFileList()
+
         dstFileUrl = None
         for fn, url in fnList:
             if os.path.basename(dstFile) == fn:
                 dstFileUrl = url
                 break
+
         if dstFileUrl is not None:
             print("Continue download \"%s\"." % (dstFileUrl))
             _Util.wgetContinueDownload(dstFileUrl, dstFile)
@@ -64,7 +67,8 @@ def _init(dataDir, sock):
 
     # do a fresh download if needed
     if dstFile is None:
-        assert fnList is not None
+        if fnList is None:
+            fnList = __getFileList()
 
         dstFile = os.path.join(dataDir, fnList[-1][0])
         dstFileUrl = fnList[-1][1]
