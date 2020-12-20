@@ -29,6 +29,7 @@ def main():
 
 
 def _init(dataDir, sock):
+    extractCompeleteFile = os.path.join(dataDir, "extract.commplete")
     fnList = None            # list<filename,url>
     dstFile = None
     dstMd5File = None
@@ -87,23 +88,34 @@ def _init(dataDir, sock):
         if not __verifyFile(dataDir, dstMd5File):
             raise Exception("the downloaded file is corrupt")
 
+    # progress
     sock.progress_changed(50)
 
     # extract
-    # sometimes tar file contains minor errors
-    print("Extract \"%s\"." % (dstFile))
-    _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
+    if not os.path.exists(extractCompeleteFile):
+        print("Extract \"%s\"." % (dstFile))
+        _Util.deleteDirContent(dataDir, [dstFile, dstMd5File])
+        _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
+        with open(extractCompeleteFile, "w") as f:
+            f.write("")
+
+    # progress
     sock.progress_changed(60)
 
     # sync
     print("Synchonize.")
     with _TempChdir(dataDir):
         _Util.cmdExec("/usr/bin/repo", "sync")
+
+    # progress
     sock.progress_changed(99)
 
-    # all done, delete the tar data file and md5 file
+    # all done, delete tar data file, md5 file, extract complete flag file
     _Util.forceDelete(dstFile)
     _Util.forceDelete(dstMd5File)
+    _Util.forceDelete(extractCompeleteFile)
+
+    # progress
     sock.progress_changed(100)
 
 
