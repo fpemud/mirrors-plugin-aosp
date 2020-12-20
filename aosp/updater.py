@@ -119,6 +119,7 @@ def _init(dataDir, sock):
     sock.progress_changed(99)
 
     # all done, delete tar data file, md5 file, extract complete flag file
+    print("Clean up.")
     _Util.forceDelete(dstFile)
     _Util.forceDelete(dstMd5File)
     _Util.forceDelete(extractCompeleteFile)
