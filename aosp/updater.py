@@ -30,21 +30,17 @@ def main():
 
 def _init(dataDir, sock):
     extractCompeleteFile = os.path.join(dataDir, "extract.commplete")
-    dstFile = None
-    dstMd5File = None
 
     # find downloaded tar data file
+    dstFile = None
+    dstMd5File = None
     if True:
         tlist = glob.glob(os.path.join(dataDir, "*.tar"))
         tlist = [x for x in tlist if os.path.exists(x + ".md5")]
         if len(tlist) > 0:
             dstFile = tlist[-1]
             dstMd5File = dstFile + ".md5"
-            _Util.deleteDirContent(dataDir, [dstFile, dstMd5File])
-        else:
-            _Util.deleteDirContent(dataDir)
 
-    # continue
     if dstFile is not None:
         print("Verify \"%s\"." % (dstFile))
         ret = __verifyFile(dataDir, dstMd5File)
@@ -84,6 +80,7 @@ def _init(dataDir, sock):
 
         dstFile = os.path.join(dataDir, fnList[-1][0])
         dstMd5File = dstFile + ".md5"
+        _Util.deleteDirContent(dataDir)
 
         dstFileUrl = fnList[-1][1]
         dstMd5FileUrl = dstFileUrl + ".md5"
