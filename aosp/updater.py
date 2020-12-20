@@ -30,7 +30,6 @@ def main():
 
 def _init(dataDir, sock):
     extractCompeleteFile = os.path.join(dataDir, "extract.commplete")
-    fnList = None            # list<filename,url>
     dstFile = None
     dstMd5File = None
 
@@ -45,46 +44,55 @@ def _init(dataDir, sock):
         else:
             _Util.deleteDirContent(dataDir)
 
-    # check tar data file, continue download if needed
-    if dstFile is not None and not __verifyFile(dataDir, dstMd5File):
-        if fnList is None:
-            fnList = __getFileList()
+    # continue
+    if dstFile is not None:
+        print("Verify \"%s\"." % (dstFile))
+        ret = __verifyFile(dataDir, dstMd5File)
+        if not ret:
+            print("Get remote file list.")
+            fnList = __getFileList()            # list<filename,url>
 
-        dstFileUrl = None
-        for fn, url in fnList:
-            if os.path.basename(dstFile) == fn:
-                dstFileUrl = url
-                break
+            dstFileUrl = None
+            for fn, url in fnList:
+                if os.path.basename(dstFile) == fn:
+                    dstFileUrl = url
+                    break
 
-        if dstFileUrl is not None:
-            print("Continue download \"%s\"." % (dstFileUrl))
-            _Util.wgetContinueDownload(dstFileUrl, dstFile)
+            if dstFileUrl is not None:
+                print("Continue download \"%s\"." % (dstFileUrl))
+                _Util.wgetContinueDownload(dstFileUrl, dstFile)
+            else:
+                dstFile = os.path.join(dataDir, fnList[-1][0])
+                dstMd5File = dstFile + ".md5"
+                _Util.deleteDirContent(dataDir)
+
+                dstFileUrl = fnList[-1][1]
+                dstMd5FileUrl = dstFileUrl + ".md5"
+                print("Download \"%s\"." % (dstMd5FileUrl))
+                _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
+                print("Download \"%s\"." % (dstFileUrl))
+                _Util.wgetDownload(dstFileUrl, dstFile)
+
+            print("Verify \"%s\"." % (dstFile))
             if not __verifyFile(dataDir, dstMd5File):
                 raise Exception("the downloaded file is corrupt")
         else:
-            dstFile = None
-            dstMd5File = None
-            _Util.deleteDirContent(dataDir)
-
-    # do a fresh download if needed
-    if dstFile is None:
-        if fnList is None:
-            fnList = __getFileList()
+            pass
+    else:
+        print("Get remote file list.")
+        fnList = __getFileList()            # list<filename,url>
 
         dstFile = os.path.join(dataDir, fnList[-1][0])
-        dstFileUrl = fnList[-1][1]
         dstMd5File = dstFile + ".md5"
-        dstMd5FileUrl = dstFileUrl + ".md5"
 
-        # download md5 file
+        dstFileUrl = fnList[-1][1]
+        dstMd5FileUrl = dstFileUrl + ".md5"
         print("Download \"%s\"." % (dstMd5FileUrl))
         _Util.wgetDownload(dstMd5FileUrl, dstMd5File)
-
-        # download data file
         print("Download \"%s\"." % (dstFileUrl))
         _Util.wgetDownload(dstFileUrl, dstFile)
 
-        # check
+        print("Verify \"%s\"." % (dstFile))
         if not __verifyFile(dataDir, dstMd5File):
             raise Exception("the downloaded file is corrupt")
 
