@@ -3,8 +3,6 @@
 
 import os
 import re
-import sys
-import json
 import time
 import glob
 import shutil
@@ -17,8 +15,8 @@ import mirrors.plugin
 
 def main():
     with mirrors.plugin.ApiClient() as sock:
-        runMode = json.loads(sys.argv[1])["run-mode"]
-        dataDir = json.loads(sys.argv[1])["storage-file"]["data-directory"]
+        runMode = mirrors.plugin.params["run-mode"]
+        dataDir = mirrors.plugin.params["storage-file"]["data-directory"]
 
         if runMode == "init":
             _init(dataDir, sock)
